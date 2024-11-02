@@ -62,25 +62,48 @@ export interface PlaidAccount {
 export enum TransactionStatus {
   CLEARED = "cleared",
   UNCLEARED = "uncleared",
-  RECURRING = "recurring",
-  RECURRING_SUGGESTED = "recurring_suggested",
+  PENDING = "pending",
 }
+
+export enum ReccuringTransactionType {
+  CLEARED = "cleared",
+  SUGGESTED = "suggested",
+  DISMISSED = "dismissed",
+}
+
 export interface Transaction {
   id: number;
   date: string;
   payee: string;
   amount: string;
   currency: string;
+  to_base: number;
   notes: string;
   category_id?: number;
+  category_name: string | null;
   asset_id?: number;
+  asset_name: string | null;
   plaid_account_id?: number;
-  status: TransactionStatus;
+  plaid_account_name: string | null;
+  status: TransactionStatus | null;
   parent_id?: number;
   is_group: boolean;
   group_id?: number;
   tags?: Tag;
   external_id?: string;
+  is_pending: boolean;
+  is_income: boolean;
+  display_name?: string;
+  display_note: string | null;
+
+  // recurring
+  recurring_id: number | null;
+  recurring_payee: string | null;
+  recurring_type: ReccuringTransactionType | null;
+  recurring_description: string | null;
+  recurring_cadence: string | null;
+  recurring_amount: number | null;
+  recurring_currency: string | null;
 }
 
 export interface TransactionUpdate {

@@ -31,7 +31,9 @@
     "@raycast/api": "^1.84.9",
     "@raycast/utils": "^1.17.0",
     "isomorphic-fetch": "^3.0.0",
-    "ky": "^1.7.2"
+    "ky": "^1.7.2",
+    "radash": "^12.1.0",
+    "ts-pattern": "^5.5.0"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^1.0.11",
