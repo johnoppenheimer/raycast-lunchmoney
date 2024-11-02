@@ -3,7 +3,6 @@ import { useCachedPromise } from "@raycast/utils";
 import { match, P } from "ts-pattern";
 import * as lunchMoney from "./lunchmoney";
 import { useMemo } from "react";
-import { compareAsc } from "date-fns/compareAsc";
 import { format } from "date-fns";
 import { alphabetical, group, sift, sort } from "radash";
 
@@ -39,27 +38,15 @@ const getTransactionSubtitle = (transaction: lunchMoney.Transaction) =>
     )
     .otherwise(() => transaction.payee);
 
-function TransactionListItem({ transaction }: { transaction: lunchMoney.Transaction }) {
+function TransactionListItem({
+  transaction,
+  onValidate,
+}: {
+  transaction: lunchMoney.Transaction;
+  onValidate: (transaction: lunchMoney.Transaction) => void;
+}) {
   const validate = async () => {
-    const toast = await showToast({
-      title: "Validating",
-      style: Toast.Style.Animated,
-    });
-
-    try {
-      await lunchMoney.updateTransaction(transaction.id, {
-        status: lunchMoney.TransactionStatus.CLEARED,
-      });
-
-      toast.style = Toast.Style.Success;
-      toast.title = "Validated";
-    } catch (error) {
-      toast.style = Toast.Style.Failure;
-      toast.title = "Failed to validate";
-      if (error instanceof Error) {
-        toast.message = error.message;
-      }
-    }
+    onValidate(transaction);
   };
 
   return (
@@ -104,7 +91,7 @@ const groupAndSortTransactions = (transactions: lunchMoney.Transaction[]) => {
 };
 
 export default function Command() {
-  const { data, isLoading } = useCachedPromise(lunchMoney.getTransactions);
+  const { data, isLoading, mutate } = useCachedPromise(lunchMoney.getTransactions);
 
   const [pendingTransactions, transactions] = useMemo(() => {
     const [pendingTransactions, transactions] = (data ?? []).reduce(
@@ -122,16 +109,51 @@ export default function Command() {
     return [groupAndSortTransactions(pendingTransactions), alphabetical(transactions, (t) => t.date, "desc")];
   }, [data?.map((t) => t.id).join(",")]);
 
+  const onValidate = async (transaction: lunchMoney.Transaction) => {
+    const toast = await showToast({
+      title: "Validating",
+      style: Toast.Style.Animated,
+    });
+
+    try {
+      await mutate(
+        lunchMoney.updateTransaction(transaction.id, {
+          status: lunchMoney.TransactionStatus.CLEARED,
+        }),
+        {
+          optimisticUpdate: (data) => {
+            if (data == null) return data;
+            return data.map((t) => {
+              if (t.id === transaction.id) {
+                t.status = lunchMoney.TransactionStatus.CLEARED;
+              }
+              return t;
+            });
+          },
+        },
+      );
+
+      toast.style = Toast.Style.Success;
+      toast.title = "Validated";
+    } catch (error) {
+      toast.style = Toast.Style.Failure;
+      toast.title = "Failed to validate";
+      if (error instanceof Error) {
+        toast.message = error.message;
+      }
+    }
+  };
+
   return (
     <List isLoading={isLoading}>
       <List.Section title="Pending Transactions">
         {pendingTransactions.map((transaction) => (
-          <TransactionListItem key={String(transaction.id)} transaction={transaction} />
+          <TransactionListItem key={String(transaction.id)} transaction={transaction} onValidate={onValidate} />
         ))}
       </List.Section>
       <List.Section title="Transactions">
         {transactions.map((transaction) => (
-          <TransactionListItem key={String(transaction.id)} transaction={transaction} />
+          <TransactionListItem key={String(transaction.id)} transaction={transaction} onValidate={onValidate} />
         ))}
       </List.Section>
     </List>
