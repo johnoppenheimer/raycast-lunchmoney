@@ -2,8 +2,8 @@ import { ActionPanel, List, Action, Icon, Color, Image, showToast, Toast } from 
 import { useCachedPromise } from "@raycast/utils";
 import { match, P } from "ts-pattern";
 import * as lunchMoney from "./lunchmoney";
-import { useMemo } from "react";
-import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import { eachMonthOfInterval, endOfMonth, format, startOfYear } from "date-fns";
 import { alphabetical, group, sift, sort } from "radash";
 
 const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
@@ -90,8 +90,32 @@ const groupAndSortTransactions = (transactions: lunchMoney.Transaction[]) => {
   return sortedTransactions;
 };
 
+function TransactionsDropdown({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const months = eachMonthOfInterval({
+    start: startOfYear(new Date()),
+    end: new Date(),
+  }).reverse();
+
+  return (
+    <List.Dropdown tooltip="Choose a month" value={value} onChange={onChange}>
+      <List.Dropdown.Section title="Month">
+        {months.map((month) => (
+          <List.Dropdown.Item
+            key={format(month, "yyyy-MM")}
+            title={format(month, "MMM yyyy")}
+            value={format(month, "yyyy-MM-dd")}
+          />
+        ))}
+      </List.Dropdown.Section>
+    </List.Dropdown>
+  );
+}
+
 export default function Command() {
-  const { data, isLoading, mutate } = useCachedPromise(lunchMoney.getTransactions);
+  const [month, setMonth] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const { data, isLoading, mutate } = useCachedPromise(lunchMoney.getTransactions, [
+    { start_date: month, end_date: format(endOfMonth(month), "yyyy-MM-dd") },
+  ]);
 
   const [pendingTransactions, transactions] = useMemo(() => {
     const [pendingTransactions, transactions] = (data ?? []).reduce(
@@ -145,7 +169,7 @@ export default function Command() {
   };
 
   return (
-    <List isLoading={isLoading}>
+    <List isLoading={isLoading} searchBarAccessory={<TransactionsDropdown value={month} onChange={setMonth} />}>
       <List.Section title="Pending Transactions">
         {pendingTransactions.map((transaction) => (
           <TransactionListItem key={String(transaction.id)} transaction={transaction} onValidate={onValidate} />
