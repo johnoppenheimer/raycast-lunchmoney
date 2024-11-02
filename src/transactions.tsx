@@ -119,7 +119,7 @@ export default function Command() {
       [[], []] as [lunchMoney.Transaction[], lunchMoney.Transaction[]],
     );
 
-    return [groupAndSortTransactions(pendingTransactions), groupAndSortTransactions(transactions)];
+    return [groupAndSortTransactions(pendingTransactions), alphabetical(transactions, (t) => t.date, "desc")];
   }, [data?.map((t) => t.id).join(",")]);
 
   return (
