@@ -5,7 +5,7 @@ import * as lunchMoney from "./lunchmoney";
 import { useMemo } from "react";
 import { compareAsc } from "date-fns/compareAsc";
 import { format } from "date-fns";
-import { sift } from "radash";
+import { alphabetical, group, sift, sort } from "radash";
 
 const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
   match(transaction)
@@ -69,7 +69,8 @@ function TransactionListItem({ transaction }: { transaction: lunchMoney.Transact
       icon={getTransactionIcon(transaction)}
       accessories={[
         { text: `${transaction.plaid_account_name ?? transaction.asset_name ?? ""}` },
-        { date: new Date(transaction.created_at), tooltip: format(transaction.created_at, "PPPppp") },
+        { text: format(transaction.date, "PP"), tooltip: transaction.date },
+        { tag: transaction.is_group ? "Group" : "" },
       ]}
       keywords={sift([transaction.payee, transaction.recurring_payee, transaction.notes, transaction.display_note])}
       actions={
@@ -87,13 +88,28 @@ function TransactionListItem({ transaction }: { transaction: lunchMoney.Transact
   );
 }
 
+const groupAndSortTransactions = (transactions: lunchMoney.Transaction[]) => {
+  const transactionsByDay = group(transactions, (t) => t.date);
+
+  const sortedTransactions: lunchMoney.Transaction[] = [];
+  const days = alphabetical(Object.keys(transactionsByDay), (k) => k, "desc");
+
+  for (const day of days) {
+    const transactions = transactionsByDay[day];
+    if (transactions != null) {
+      sortedTransactions.push(...sort(transactions, (t) => t.to_base, true));
+    }
+  }
+  return sortedTransactions;
+};
+
 export default function Command() {
   const { data, isLoading } = useCachedPromise(lunchMoney.getTransactions);
 
   const [pendingTransactions, transactions] = useMemo(() => {
     const [pendingTransactions, transactions] = (data ?? []).reduce(
       function groupTransactions(acc, transaction) {
-        if (transaction.status === lunchMoney.TransactionStatus.PENDING) {
+        if (transaction.status === lunchMoney.TransactionStatus.PENDING || transaction.is_pending) {
           acc[0].push(transaction);
         } else {
           acc[1].push(transaction);
@@ -103,10 +119,7 @@ export default function Command() {
       [[], []] as [lunchMoney.Transaction[], lunchMoney.Transaction[]],
     );
 
-    return [
-      pendingTransactions.sort((a, b) => compareAsc(b.created_at, a.created_at)),
-      transactions.sort((a, b) => compareAsc(b.created_at, a.created_at)),
-    ];
+    return [groupAndSortTransactions(pendingTransactions), groupAndSortTransactions(transactions)];
   }, [data?.map((t) => t.id).join(",")]);
 
   return (

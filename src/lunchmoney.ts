@@ -89,7 +89,7 @@ export interface Transaction {
   plaid_account_name: string | null;
   status: TransactionStatus | null;
   parent_id?: number;
-  is_group: boolean;
+  is_group: boolean | null;
   group_id?: number;
   tags?: Tag;
   external_id?: string;
