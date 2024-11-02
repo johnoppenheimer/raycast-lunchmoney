@@ -62,10 +62,6 @@ function TransactionListItem({ transaction }: { transaction: lunchMoney.Transact
     }
   };
 
-  const markAsPosted = async () => {
-    // TODO:
-  };
-
   return (
     <List.Item
       title={`${Intl.NumberFormat("en-US", { style: "currency", currency: transaction.currency }).format(transaction.to_base)}`}
@@ -81,7 +77,10 @@ function TransactionListItem({ transaction }: { transaction: lunchMoney.Transact
           {transaction.status != lunchMoney.TransactionStatus.CLEARED && !transaction.is_pending && (
             <Action title="Validate" onAction={validate} />
           )}
-          {transaction.is_pending && <Action title="Mark as Posted" onAction={markAsPosted} />}
+          <Action.OpenInBrowser
+            title="View Payee in Lunch Money"
+            url={`https://my.lunchmoney.app/transactions/${format(transaction.date, "yyyy/MM")}?match=all&payee_exact=${encodeURIComponent(transaction.payee)}&time=month`}
+          />
         </ActionPanel>
       }
     />
