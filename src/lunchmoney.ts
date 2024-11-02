@@ -91,7 +91,7 @@ export interface Transaction {
   parent_id?: number;
   is_group: boolean | null;
   group_id?: number;
-  tags?: Tag;
+  tags?: Tag[];
   external_id?: string;
   is_pending: boolean;
   is_income: boolean;

@@ -58,6 +58,7 @@ function TransactionListItem({
         { text: `${transaction.plaid_account_name ?? transaction.asset_name ?? ""}` },
         { text: format(transaction.date, "PP"), tooltip: transaction.date },
         transaction.is_group ? { icon: Icon.Folder, tooltip: "Group" } : undefined,
+        ...(transaction.tags?.map((tag) => ({ tag: tag.name })) ?? []),
       ])}
       keywords={sift([transaction.payee, transaction.recurring_payee, transaction.notes, transaction.display_note])}
       actions={
