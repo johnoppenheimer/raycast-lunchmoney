@@ -73,6 +73,8 @@ export enum ReccuringTransactionType {
 
 export interface Transaction {
   id: number;
+  created_at: string;
+  updated_at: string;
   date: string;
   payee: string;
   amount: string;
@@ -107,17 +109,17 @@ export interface Transaction {
 }
 
 export interface TransactionUpdate {
-  date: string;
-  category_id: number;
-  payee: string;
+  date?: string;
+  category_id?: number;
+  payee?: string;
   amount?: number | string;
-  currency: string;
-  asset_id: number;
-  recurring_id: number;
-  notes: string;
-  status: TransactionStatus.CLEARED | TransactionStatus.UNCLEARED;
-  external_id: string;
-  tags: (number | string)[];
+  currency?: string;
+  asset_id?: number;
+  recurring_id?: number;
+  notes?: string;
+  status?: TransactionStatus.CLEARED | TransactionStatus.UNCLEARED;
+  external_id?: string;
+  tags?: (number | string)[];
 }
 
 export interface Split {
@@ -184,4 +186,9 @@ const client = ky.create({
 export const getTransactions = async (args?: TransactionsEndpointArguments): Promise<Transaction[]> => {
   const response = await client.get<{ transactions: Transaction[] }>("v1/transactions", { searchParams: args });
   return (await response.json()).transactions;
+};
+
+export const updateTransaction = async (transactionId: number, args: TransactionUpdate): Promise<Transaction> => {
+  const response = await client.put<Transaction>(`v1/transactions/${transactionId}`, { json: { transaction: args } });
+  return response.json();
 };

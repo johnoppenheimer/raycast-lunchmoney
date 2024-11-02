@@ -30,6 +30,7 @@
   "dependencies": {
     "@raycast/api": "^1.84.9",
     "@raycast/utils": "^1.17.0",
+    "date-fns": "^4.1.0",
     "isomorphic-fetch": "^3.0.0",
     "ky": "^1.7.2",
     "radash": "^12.1.0",

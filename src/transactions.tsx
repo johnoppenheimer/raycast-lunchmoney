@@ -1,10 +1,14 @@
-import { ActionPanel, List, Action, Icon, Color, Image } from "@raycast/api";
-import { usePromise } from "@raycast/utils";
+import { ActionPanel, List, Action, Icon, Color, Image, showToast, Toast } from "@raycast/api";
+import { useCachedPromise } from "@raycast/utils";
 import { match, P } from "ts-pattern";
 import * as lunchMoney from "./lunchmoney";
+import { useMemo } from "react";
+import { compareAsc } from "date-fns/compareAsc";
+import { format } from "date-fns";
+import { sift } from "radash";
 
-function getTransactionIcon(transaction: lunchMoney.Transaction) {
-  return match(transaction)
+const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
+  match(transaction)
     .returnType<Image>()
     .with({ status: lunchMoney.TransactionStatus.CLEARED, recurring_type: P.nullish }, () => ({
       source: Icon.CheckCircle,
@@ -25,23 +29,59 @@ function getTransactionIcon(transaction: lunchMoney.Transaction) {
       source: Icon.Stopwatch,
     }))
     .otherwise(() => ({ source: Icon.Circle }));
-}
+
+const getTransactionSubtitle = (transaction: lunchMoney.Transaction) =>
+  match(transaction)
+    .returnType<string>()
+    .with(
+      { recurring_payee: P.string.select(), recurring_type: lunchMoney.ReccuringTransactionType.CLEARED },
+      (payee) => payee,
+    )
+    .otherwise(() => transaction.payee);
 
 function TransactionListItem({ transaction }: { transaction: lunchMoney.Transaction }) {
+  const validate = async () => {
+    const toast = await showToast({
+      title: "Validating",
+      style: Toast.Style.Animated,
+    });
+
+    try {
+      await lunchMoney.updateTransaction(transaction.id, {
+        status: lunchMoney.TransactionStatus.CLEARED,
+      });
+
+      toast.style = Toast.Style.Success;
+      toast.title = "Validated";
+    } catch (error) {
+      toast.style = Toast.Style.Failure;
+      toast.title = "Failed to validate";
+      if (error instanceof Error) {
+        toast.message = error.message;
+      }
+    }
+  };
+
+  const markAsPosted = async () => {
+    // TODO:
+  };
+
   return (
     <List.Item
       title={`${Intl.NumberFormat("en-US", { style: "currency", currency: transaction.currency }).format(transaction.to_base)}`}
-      subtitle={transaction.payee}
+      subtitle={getTransactionSubtitle(transaction)}
       icon={getTransactionIcon(transaction)}
       accessories={[
         { text: `${transaction.plaid_account_name ?? transaction.asset_name ?? ""}` },
-        { date: new Date(transaction.date), tooltip: transaction.date },
+        { date: new Date(transaction.created_at), tooltip: format(transaction.created_at, "PPPppp") },
       ]}
+      keywords={sift([transaction.payee, transaction.recurring_payee, transaction.notes, transaction.display_note])}
       actions={
         <ActionPanel>
-          {transaction.status != lunchMoney.TransactionStatus.CLEARED && (
-            <Action title="Validate" onAction={() => console.log("validate transaction")} />
+          {transaction.status != lunchMoney.TransactionStatus.CLEARED && !transaction.is_pending && (
+            <Action title="Validate" onAction={validate} />
           )}
+          {transaction.is_pending && <Action title="Mark as Posted" onAction={markAsPosted} />}
         </ActionPanel>
       }
     />
@@ -49,19 +89,26 @@ function TransactionListItem({ transaction }: { transaction: lunchMoney.Transact
 }
 
 export default function Command() {
-  const { data, isLoading } = usePromise(lunchMoney.getTransactions);
+  const { data, isLoading } = useCachedPromise(lunchMoney.getTransactions);
 
-  const [pendingTransactions, transactions] = (data ?? []).reduce(
-    function groupTransactions(acc, transaction) {
-      if (transaction.status === lunchMoney.TransactionStatus.PENDING) {
-        acc[0].push(transaction);
-      } else {
-        acc[1].push(transaction);
-      }
-      return acc;
-    },
-    [[], []] as [lunchMoney.Transaction[], lunchMoney.Transaction[]],
-  );
+  const [pendingTransactions, transactions] = useMemo(() => {
+    const [pendingTransactions, transactions] = (data ?? []).reduce(
+      function groupTransactions(acc, transaction) {
+        if (transaction.status === lunchMoney.TransactionStatus.PENDING) {
+          acc[0].push(transaction);
+        } else {
+          acc[1].push(transaction);
+        }
+        return acc;
+      },
+      [[], []] as [lunchMoney.Transaction[], lunchMoney.Transaction[]],
+    );
+
+    return [
+      pendingTransactions.sort((a, b) => compareAsc(b.created_at, a.created_at)),
+      transactions.sort((a, b) => compareAsc(b.created_at, a.created_at)),
+    ];
+  }, [data?.map((t) => t.id).join(",")]);
 
   return (
     <List isLoading={isLoading}>
