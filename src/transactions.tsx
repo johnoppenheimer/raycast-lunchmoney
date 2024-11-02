@@ -17,7 +17,7 @@ const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
     .with(
       { status: lunchMoney.TransactionStatus.CLEARED, recurring_type: lunchMoney.ReccuringTransactionType.CLEARED },
       () => ({
-        source: Icon.Repeat,
+        source: Icon.RotateClockwise,
         tintColor: Color.Blue,
       }),
     )
@@ -67,11 +67,11 @@ function TransactionListItem({ transaction }: { transaction: lunchMoney.Transact
       title={`${Intl.NumberFormat("en-US", { style: "currency", currency: transaction.currency }).format(transaction.to_base)}`}
       subtitle={getTransactionSubtitle(transaction)}
       icon={getTransactionIcon(transaction)}
-      accessories={[
+      accessories={sift([
         { text: `${transaction.plaid_account_name ?? transaction.asset_name ?? ""}` },
         { text: format(transaction.date, "PP"), tooltip: transaction.date },
-        { tag: transaction.is_group ? "Group" : "" },
-      ]}
+        transaction.is_group ? { icon: Icon.Folder, tooltip: "Group" } : undefined,
+      ])}
       keywords={sift([transaction.payee, transaction.recurring_payee, transaction.notes, transaction.display_note])}
       actions={
         <ActionPanel>
@@ -111,7 +111,7 @@ export default function Command() {
       function groupTransactions(acc, transaction) {
         if (transaction.status === lunchMoney.TransactionStatus.PENDING || transaction.is_pending) {
           acc[0].push(transaction);
-        } else {
+        } else if (transaction.group_id == null) {
           acc[1].push(transaction);
         }
         return acc;
