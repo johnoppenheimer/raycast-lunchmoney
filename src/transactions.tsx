@@ -3,7 +3,7 @@ import { useCachedPromise } from "@raycast/utils";
 import { match, P } from "ts-pattern";
 import * as lunchMoney from "./lunchmoney";
 import { useMemo, useState } from "react";
-import { eachMonthOfInterval, endOfMonth, format, startOfYear } from "date-fns";
+import { compareDesc, eachMonthOfInterval, endOfMonth, format, startOfYear } from "date-fns";
 import { alphabetical, group, sift, sort } from "radash";
 
 const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
@@ -56,7 +56,6 @@ function TransactionListItem({
       icon={getTransactionIcon(transaction)}
       accessories={sift([
         { text: `${transaction.plaid_account_name ?? transaction.asset_name ?? ""}` },
-        { text: format(transaction.date, "PP"), tooltip: transaction.date },
         transaction.is_group ? { icon: Icon.Folder, tooltip: "Group" } : undefined,
         ...(transaction.tags?.map((tag) => ({ tag: tag.name })) ?? []),
         transaction.category_name ? { tag: transaction.category_name, icon: Icon.Tag } : undefined,
@@ -77,7 +76,8 @@ function TransactionListItem({
   );
 }
 
-const groupAndSortTransactions = (transactions: lunchMoney.Transaction[]) => {
+/// Sorts transactions by date, then by to_base
+const groupAndSortTransactionsByBase = (transactions: lunchMoney.Transaction[]) => {
   const transactionsByDay = group(transactions, (t) => t.date);
 
   const sortedTransactions: lunchMoney.Transaction[] = [];
@@ -87,6 +87,24 @@ const groupAndSortTransactions = (transactions: lunchMoney.Transaction[]) => {
     const transactions = transactionsByDay[day];
     if (transactions != null) {
       sortedTransactions.push(...sort(transactions, (t) => t.to_base, true));
+    }
+  }
+  return sortedTransactions;
+};
+
+/// Sorts transactions by date, then by created_at
+const groupAndSortTransactionsByCreatedAt = (
+  transactions: lunchMoney.Transaction[],
+): Record<string, lunchMoney.Transaction[]> => {
+  const transactionsByDay = group(transactions, (t) => t.date);
+
+  const sortedTransactions: Record<string, lunchMoney.Transaction[]> = {};
+  const days = alphabetical(Object.keys(transactionsByDay), (k) => k, "desc");
+
+  for (const day of days) {
+    const transactions = transactionsByDay[day];
+    if (transactions != null) {
+      sortedTransactions[day] = transactions.toSorted((a, b) => compareDesc(a.created_at, b.created_at));
     }
   }
   return sortedTransactions;
@@ -119,7 +137,7 @@ export default function Command() {
     { start_date: month, end_date: format(endOfMonth(month), "yyyy-MM-dd") },
   ]);
 
-  const [pendingTransactions, transactions] = useMemo(() => {
+  const [pendingTransactions, transactionsGroups] = useMemo(() => {
     const [pendingTransactions, transactions] = (data ?? []).reduce(
       function groupTransactions(acc, transaction) {
         if (transaction.status === lunchMoney.TransactionStatus.PENDING || transaction.is_pending) {
@@ -132,7 +150,7 @@ export default function Command() {
       [[], []] as [lunchMoney.Transaction[], lunchMoney.Transaction[]],
     );
 
-    return [groupAndSortTransactions(pendingTransactions), alphabetical(transactions, (t) => t.date, "desc")];
+    return [groupAndSortTransactionsByBase(pendingTransactions), groupAndSortTransactionsByCreatedAt(transactions)];
   }, [data?.map((t) => `${t.id}:${t.status}`).join(",")]);
 
   const onValidate = async (transaction: lunchMoney.Transaction) => {
@@ -177,11 +195,13 @@ export default function Command() {
           <TransactionListItem key={String(transaction.id)} transaction={transaction} onValidate={onValidate} />
         ))}
       </List.Section>
-      <List.Section title="Transactions">
-        {transactions.map((transaction) => (
-          <TransactionListItem key={String(transaction.id)} transaction={transaction} onValidate={onValidate} />
-        ))}
-      </List.Section>
+      {Object.entries(transactionsGroups).map(([month, transactions]) => (
+        <List.Section key={month} title={format(new Date(month), "PP")}>
+          {transactions.map((transaction) => (
+            <TransactionListItem key={String(transaction.id)} transaction={transaction} onValidate={onValidate} />
+          ))}
+        </List.Section>
+      ))}
     </List>
   );
 }
