@@ -3,7 +3,7 @@ import { useCachedPromise } from "@raycast/utils";
 import { match, P } from "ts-pattern";
 import * as lunchMoney from "./lunchmoney";
 import { useMemo, useState } from "react";
-import { compareDesc, eachMonthOfInterval, endOfMonth, format, startOfYear } from "date-fns";
+import { compareDesc, eachMonthOfInterval, endOfMonth, format, parse, startOfMonth, startOfYear } from "date-fns";
 import { alphabetical, group, sift, sort } from "radash";
 
 const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
@@ -132,9 +132,9 @@ function TransactionsDropdown({ value, onChange }: { value: string; onChange: (v
 }
 
 export default function Command() {
-  const [month, setMonth] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [month, setMonth] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const { data, isLoading, mutate } = useCachedPromise(lunchMoney.getTransactions, [
-    { start_date: month, end_date: format(endOfMonth(month), "yyyy-MM-dd") },
+    { start_date: month, end_date: format(endOfMonth(parse(month, "yyyy-MM-dd", new Date())), "yyyy-MM-dd") },
   ]);
 
   const [pendingTransactions, transactionsGroups] = useMemo(() => {
