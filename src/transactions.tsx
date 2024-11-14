@@ -60,7 +60,13 @@ function TransactionListItem({
         ...(transaction.tags?.map((tag) => ({ tag: tag.name })) ?? []),
         transaction.category_name ? { tag: transaction.category_name, icon: Icon.Tag } : undefined,
       ])}
-      keywords={sift([transaction.payee, transaction.recurring_payee, transaction.notes, transaction.display_note])}
+      keywords={sift([
+        transaction.status,
+        transaction.payee,
+        transaction.recurring_payee,
+        transaction.notes,
+        transaction.display_note,
+      ])}
       actions={
         <ActionPanel>
           {transaction.status != lunchMoney.TransactionStatus.CLEARED && !transaction.is_pending && (
