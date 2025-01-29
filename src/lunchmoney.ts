@@ -201,3 +201,24 @@ export const updateTransaction = async (
   });
   return response.json();
 };
+
+export interface Category {
+  id: number;
+  name: string;
+  description: string;
+  is_income: boolean;
+  exclude_from_budget: boolean;
+  exclude_from_totals: boolean;
+  updated_at: string;
+  created_at: string;
+  is_group: boolean;
+  group_id?: number;
+  children?: Category[];
+}
+
+export const getCategories = async (): Promise<Category[]> => {
+  const response = await client.get<{ categories: Category[] }>("v1/categories", {
+    searchParams: { format: "nested" },
+  });
+  return (await response.json()).categories;
+};

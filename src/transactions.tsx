@@ -2,6 +2,7 @@ import { ActionPanel, List, Action, Icon, Color, Image, showToast, Toast } from 
 import { useCachedPromise } from "@raycast/utils";
 import { match, P } from "ts-pattern";
 import * as lunchMoney from "./lunchmoney";
+import { EditTransactionForm } from "./transactions_form"
 import { useMemo, useState } from "react";
 import { compareDesc, eachMonthOfInterval, endOfMonth, format, parse, startOfMonth, startOfYear } from "date-fns";
 import { alphabetical, group, sift, sort } from "radash";
@@ -49,6 +50,10 @@ function TransactionListItem({
     onValidate(transaction);
   };
 
+  function mutate(): void {
+    throw new Error("Function not implemented.");
+  }
+
   return (
     <List.Item
       title={`${Intl.NumberFormat("en-US", { style: "currency", currency: transaction.currency }).format(transaction.to_base)}`}
@@ -70,8 +75,18 @@ function TransactionListItem({
       actions={
         <ActionPanel>
           {transaction.status != lunchMoney.TransactionStatus.CLEARED && !transaction.is_pending && (
-            <Action title="Validate" icon={Icon.CheckCircle} onAction={validate} />
+            <Action
+              title="Validate"
+              shortcut={{ modifiers: [], key: "enter" }}
+              icon={Icon.CheckCircle}
+              onAction={validate} />
           )}
+          <Action.Push
+            title="Edit Transaction"
+            shortcut={{ modifiers: [], key: "arrowRight" }}
+            icon={Icon.Pencil}
+            target={<EditTransactionForm transaction={transaction} onUpdate={mutate} />}
+          />
           <Action.OpenInBrowser
             title="View Payee in Lunch Money"
             url={`https://my.lunchmoney.app/transactions/${format(transaction.date, "yyyy/MM")}?match=all&payee_exact=${encodeURIComponent(transaction.payee)}&time=month`}
