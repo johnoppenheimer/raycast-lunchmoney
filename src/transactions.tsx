@@ -42,17 +42,15 @@ const getTransactionSubtitle = (transaction: lunchMoney.Transaction) =>
 function TransactionListItem({
   transaction,
   onValidate,
+  onEdit,
 }: {
   transaction: lunchMoney.Transaction;
   onValidate: (transaction: lunchMoney.Transaction) => void;
+  onEdit: (transaction: lunchMoney.Transaction, update: lunchMoney.TransactionUpdate) => void;
 }) {
   const validate = async () => {
     onValidate(transaction);
   };
-
-  function mutate(): void {
-    throw new Error("Function not implemented.");
-  }
 
   return (
     <List.Item
@@ -77,15 +75,15 @@ function TransactionListItem({
           {transaction.status != lunchMoney.TransactionStatus.CLEARED && !transaction.is_pending && (
             <Action
               title="Validate"
-              shortcut={{ modifiers: [], key: "enter" }}
               icon={Icon.CheckCircle}
-              onAction={validate} />
+              onAction={validate}
+            />
           )}
           <Action.Push
             title="Edit Transaction"
             shortcut={{ modifiers: [], key: "arrowRight" }}
             icon={Icon.Pencil}
-            target={<EditTransactionForm transaction={transaction} onUpdate={mutate} />}
+            target={<EditTransactionForm transaction={transaction} onEdit={onEdit} />}
           />
           <Action.OpenInBrowser
             title="View Payee in Lunch Money"
@@ -172,7 +170,7 @@ export default function Command() {
     );
 
     return [groupAndSortTransactionsByBase(pendingTransactions), groupAndSortTransactionsByCreatedAt(transactions)];
-  }, [data?.map((t) => `${t.id}:${t.status}`).join(",")]);
+  }, [data]);
 
   const onValidate = async (transaction: lunchMoney.Transaction) => {
     const toast = await showToast({
@@ -209,17 +207,62 @@ export default function Command() {
     }
   };
 
+  const onEdit = async (transaction: lunchMoney.Transaction, update: lunchMoney.TransactionUpdate) => {
+    const toast = await showToast({
+      title: "Updating Transaction",
+      style: Toast.Style.Animated,
+    });
+
+    try {
+      await mutate(
+        lunchMoney.updateTransaction(transaction.id, update),
+        {
+          optimisticUpdate: (currentData) => {
+            if (!currentData) return currentData;
+            return currentData.map((t) => {
+              if (t.id === transaction.id) {
+                t.payee = update.payee ? update.payee : transaction.payee;
+                t.status = update.status ? update.status : transaction.status;
+                t.notes = update.notes ? update.notes : transaction.notes;
+                t.category_id = update.category_id ? update.category_id : transaction.category_id;
+              }
+              return t;
+            });
+          },
+        });
+
+      toast.style = Toast.Style.Success;
+      toast.title = "Transaction updated";
+    } catch (error) {
+      toast.style = Toast.Style.Failure;
+      toast.title = "Failed to update transaction";
+      if (error instanceof Error) {
+        toast.message = error.message;
+      }
+    }
+  };
+
   return (
     <List isLoading={isLoading} searchBarAccessory={<TransactionsDropdown value={month} onChange={setMonth} />}>
       <List.Section title="Pending Transactions">
         {pendingTransactions.map((transaction) => (
-          <TransactionListItem key={String(transaction.id)} transaction={transaction} onValidate={onValidate} />
+          <TransactionListItem
+            key={String(transaction.id)}
+            transaction={transaction}
+            onValidate={onValidate}
+            onEdit={onEdit}
+          />
         ))}
       </List.Section>
       {Object.entries(transactionsGroups).map(([month, transactions]) => (
         <List.Section key={month} title={format(new Date(month), "PP")}>
           {transactions.map((transaction) => (
-            <TransactionListItem key={String(transaction.id)} transaction={transaction} onValidate={onValidate} />
+            <TransactionListItem
+              key={String(transaction.id)}
+              transaction={transaction}
+              onValidate={onValidate}
+              onEdit={onEdit}
+            />
           ))}
         </List.Section>
       ))}

@@ -145,7 +145,9 @@ export interface Category {
   created_at: string;
   is_group: boolean;
   group_id?: number;
+  children?: Category[];
 }
+
 export interface DraftTransaction {
   date: string;
   category_id?: number;
@@ -162,6 +164,8 @@ export interface DraftTransaction {
 export interface Tag {
   id: number;
   name: string;
+  description: string;
+  archived: boolean;
 }
 
 export type TransactionsEndpointArguments = {
@@ -188,10 +192,16 @@ export const getTransactions = async (args?: TransactionsEndpointArguments): Pro
   return (await response.json()).transactions;
 };
 
+export const getTransaction = async (transactionId: number): Promise<Transaction> => {
+  const response = await client.get<Transaction>(`v1/transactions/${transactionId}`)
+  return response.json();
+};
+
 export type UpdateTransactionResponse = {
   updated: boolean;
   split?: number[];
 };
+
 export const updateTransaction = async (
   transactionId: number,
   args: TransactionUpdate,
@@ -202,23 +212,14 @@ export const updateTransaction = async (
   return response.json();
 };
 
-export interface Category {
-  id: number;
-  name: string;
-  description: string;
-  is_income: boolean;
-  exclude_from_budget: boolean;
-  exclude_from_totals: boolean;
-  updated_at: string;
-  created_at: string;
-  is_group: boolean;
-  group_id?: number;
-  children?: Category[];
-}
-
 export const getCategories = async (): Promise<Category[]> => {
   const response = await client.get<{ categories: Category[] }>("v1/categories", {
     searchParams: { format: "nested" },
   });
   return (await response.json()).categories;
+};
+
+export const getTags = async (): Promise<Tag[]> => {
+  const response = await client.get<Tag[]>("v1/tags");
+  return response.json();
 };
