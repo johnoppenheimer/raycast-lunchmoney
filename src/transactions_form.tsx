@@ -117,7 +117,7 @@ export function EditTransactionForm({
         });
     };
 
-    const formatedAmount = `${Intl.NumberFormat("en-US", { style: "currency", currency: transaction.currency }).format(transaction.to_base)}}`
+    const formatedAmount = `${Intl.NumberFormat("en-US", { style: "currency", currency: transaction.currency }).format(transaction.to_base)}`
 
     return (
         <Form
@@ -125,7 +125,7 @@ export function EditTransactionForm({
             actions={
                 <ActionPanel>
                     <Action.SubmitForm title="Save Changes" onSubmit={handleSubmit} />
-                    <Action title="Back" shortcut={{ modifiers: [], key: "arrowLeft" }} onAction={pop} f />
+                    <Action title="Back" shortcut={{ modifiers: [], key: "arrowLeft" }} onAction={pop} />
                 </ActionPanel>
             }
         >
