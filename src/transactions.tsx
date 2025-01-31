@@ -6,8 +6,9 @@ import { EditTransactionForm } from "./transactions_form"
 import { useMemo, useState } from "react";
 import { compareDesc, eachMonthOfInterval, endOfMonth, format, parse, startOfMonth, startOfYear } from "date-fns";
 import { alphabetical, group, sift, sort } from "radash";
+import { getFormatedAmount } from "./format";
 
-const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
+export const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
   match(transaction)
     .returnType<Image>()
     .with({ status: lunchMoney.TransactionStatus.CLEARED, recurring_type: P.nullish }, () => ({
@@ -30,7 +31,7 @@ const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
     }))
     .otherwise(() => ({ source: Icon.Circle }));
 
-const getTransactionSubtitle = (transaction: lunchMoney.Transaction) =>
+export const getTransactionSubtitle = (transaction: lunchMoney.Transaction) =>
   match(transaction)
     .returnType<string>()
     .with(
@@ -38,6 +39,7 @@ const getTransactionSubtitle = (transaction: lunchMoney.Transaction) =>
       (payee) => payee,
     )
     .otherwise(() => transaction.payee);
+
 
 function TransactionListItem({
   transaction,
@@ -54,7 +56,7 @@ function TransactionListItem({
 
   return (
     <List.Item
-      title={`${Intl.NumberFormat("en-US", { style: "currency", currency: transaction.currency }).format(transaction.to_base)}`}
+      title={getFormatedAmount(transaction)}
       subtitle={getTransactionSubtitle(transaction)}
       icon={getTransactionIcon(transaction)}
       accessories={sift([
@@ -219,14 +221,15 @@ export default function Command() {
         {
           optimisticUpdate: (currentData) => {
             if (!currentData) return currentData;
-            return currentData.map((t) => {
-              if (t.id === transaction.id) {
-                t.payee = update.payee ? update.payee : transaction.payee;
-                t.status = update.status ? update.status : transaction.status;
-                t.notes = update.notes ? update.notes : transaction.notes;
-                t.category_id = update.category_id ? update.category_id : transaction.category_id;
+            return currentData.map((tx) => {
+              if (tx.id === transaction.id) {
+                tx.payee = update.payee ? update.payee : transaction.payee;
+                tx.status = update.status ? update.status : transaction.status;
+                tx.notes = update.notes ? update.notes : transaction.notes;
+                tx.category_id = update.category_id ? update.category_id : transaction.category_id;
+                tx.date = update.date ? update.date : transaction.date;
               }
-              return t;
+              return tx;
             });
           },
         });
@@ -240,7 +243,7 @@ export default function Command() {
         toast.message = error.message;
       }
     }
-  };
+  }
 
   return (
     <List isLoading={isLoading} searchBarAccessory={<TransactionsDropdown value={month} onChange={setMonth} />}>

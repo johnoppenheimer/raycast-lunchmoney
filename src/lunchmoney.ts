@@ -148,6 +148,46 @@ export interface Category {
   children?: Category[];
 }
 
+export interface SummarizedTransaction {
+  id: number;
+  date: string;
+  amount: string;
+  currency: string;
+  payee: string;
+  category_id?: number;
+  recurring_id?: number;
+  to_base: number;
+}
+
+export interface RecurringItem {
+  id: number;
+  start_date?: string;
+  end_date?: string;
+  payee: string;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+  billing_date: string;
+  original_name?: string;
+  description?: string;
+  plaid_account_id?: number;
+  asset_id?: number;
+  source: 'manual' | 'transaction' | 'system' | 'null';
+  notes?: string;
+  amount: string;
+  category_id?: number;
+  category_group_id?: number;
+  is_income: boolean;
+  exclude_from_totals: boolean;
+  granularity: 'day' | 'week' | 'month' | 'year';
+  quantity?: number;
+  occurrences: Record<string, SummarizedTransaction[]>;
+  transactions_within_range?: SummarizedTransaction[];
+  missing_dates_within_range?: string[];
+  date?: string;
+  to_base: number;
+}
+
 export interface DraftTransaction {
   date: string;
   category_id?: number;
@@ -222,4 +262,9 @@ export const getCategories = async (): Promise<Category[]> => {
 export const getTags = async (): Promise<Tag[]> => {
   const response = await client.get<Tag[]>("v1/tags");
   return response.json();
+};
+
+export const getRecurringItems = async (): Promise<RecurringItem[]> => {
+  const response = await client.get<RecurringItem[]>(`v1/recurring_items`)
+  return response.json()
 };
