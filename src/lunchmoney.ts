@@ -172,14 +172,14 @@ export interface RecurringItem {
   description?: string;
   plaid_account_id?: number;
   asset_id?: number;
-  source: 'manual' | 'transaction' | 'system' | 'null';
+  source: "manual" | "transaction" | "system" | "null";
   notes?: string;
   amount: string;
   category_id?: number;
   category_group_id?: number;
   is_income: boolean;
   exclude_from_totals: boolean;
-  granularity: 'day' | 'week' | 'month' | 'year';
+  granularity: "day" | "week" | "month" | "year";
   quantity?: number;
   occurrences: Record<string, SummarizedTransaction[]>;
   transactions_within_range?: SummarizedTransaction[];
@@ -233,7 +233,7 @@ export const getTransactions = async (args?: TransactionsEndpointArguments): Pro
 };
 
 export const getTransaction = async (transactionId: number): Promise<Transaction> => {
-  const response = await client.get<Transaction>(`v1/transactions/${transactionId}`)
+  const response = await client.get<Transaction>(`v1/transactions/${transactionId}`);
   return response.json();
 };
 
@@ -265,6 +265,6 @@ export const getTags = async (): Promise<Tag[]> => {
 };
 
 export const getRecurringItems = async (): Promise<RecurringItem[]> => {
-  const response = await client.get<RecurringItem[]>(`v1/recurring_items`)
-  return response.json()
+  const response = await client.get<RecurringItem[]>(`v1/recurring_items`);
+  return response.json();
 };

@@ -2,7 +2,7 @@ import { ActionPanel, List, Action, Icon, Color, Image, showToast, Toast } from 
 import { useCachedPromise } from "@raycast/utils";
 import { match, P } from "ts-pattern";
 import * as lunchMoney from "./lunchmoney";
-import { EditTransactionForm } from "./transactions_form"
+import { EditTransactionForm } from "./transactions_form";
 import { useMemo, useState } from "react";
 import { compareDesc, eachMonthOfInterval, endOfMonth, format, parse, startOfMonth, startOfYear } from "date-fns";
 import { alphabetical, group, sift, sort } from "radash";
@@ -40,7 +40,6 @@ export const getTransactionSubtitle = (transaction: lunchMoney.Transaction) =>
     )
     .otherwise(() => transaction.payee);
 
-
 function TransactionListItem({
   transaction,
   onValidate,
@@ -75,11 +74,7 @@ function TransactionListItem({
       actions={
         <ActionPanel>
           {transaction.status != lunchMoney.TransactionStatus.CLEARED && !transaction.is_pending && (
-            <Action
-              title="Validate"
-              icon={Icon.CheckCircle}
-              onAction={validate}
-            />
+            <Action title="Validate" icon={Icon.CheckCircle} onAction={validate} />
           )}
           <Action.Push
             title="Edit Transaction"
@@ -216,23 +211,21 @@ export default function Command() {
     });
 
     try {
-      await mutate(
-        lunchMoney.updateTransaction(transaction.id, update),
-        {
-          optimisticUpdate: (currentData) => {
-            if (!currentData) return currentData;
-            return currentData.map((tx) => {
-              if (tx.id === transaction.id) {
-                tx.payee = update.payee ? update.payee : transaction.payee;
-                tx.status = update.status ? update.status : transaction.status;
-                tx.notes = update.notes ? update.notes : transaction.notes;
-                tx.category_id = update.category_id ? update.category_id : transaction.category_id;
-                tx.date = update.date ? update.date : transaction.date;
-              }
-              return tx;
-            });
-          },
-        });
+      await mutate(lunchMoney.updateTransaction(transaction.id, update), {
+        optimisticUpdate: (currentData) => {
+          if (!currentData) return currentData;
+          return currentData.map((tx) => {
+            if (tx.id === transaction.id) {
+              tx.payee = update.payee ? update.payee : transaction.payee;
+              tx.status = update.status ? update.status : transaction.status;
+              tx.notes = update.notes ? update.notes : transaction.notes;
+              tx.category_id = update.category_id ? update.category_id : transaction.category_id;
+              tx.date = update.date ? update.date : transaction.date;
+            }
+            return tx;
+          });
+        },
+      });
 
       toast.style = Toast.Style.Success;
       toast.title = "Transaction updated";
@@ -243,7 +236,7 @@ export default function Command() {
         toast.message = error.message;
       }
     }
-  }
+  };
 
   return (
     <List isLoading={isLoading} searchBarAccessory={<TransactionsDropdown value={month} onChange={setMonth} />}>
