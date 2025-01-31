@@ -4,6 +4,59 @@ import { useCachedPromise, useForm } from "@raycast/utils";
 import * as lunchMoney from "./lunchmoney";
 import { Key, useMemo, useState } from "react";
 import { getFormatedAmount } from "./format";
+import { formatISO } from "date-fns";
+import { all } from "radash";
+
+function TransactionFormRecuringItems({
+  transaction,
+  recuringItems,
+}: {
+  transaction: lunchMoney.Transaction;
+  recuringItems: lunchMoney.RecurringItem[];
+}) {
+  return recuringItems.map((recuring) => (
+    <Form.Dropdown.Item
+      key={recuring.id}
+      value={String(recuring.id)}
+      title={recuring.payee}
+      icon={recuring.id === transaction.recurring_id ? Icon.Check : undefined}
+    />
+  ));
+}
+
+function TransactionFormCategories({
+  transaction,
+  categories,
+}: {
+  transaction: lunchMoney.Transaction;
+  categories: lunchMoney.Category[];
+}) {
+  return categories.map((category) => {
+    if (category.is_group && category.children) {
+      return (
+        <Form.Dropdown.Section key={category.id} title={category.name}>
+          {category.children.map((child) => (
+            <Form.Dropdown.Item
+              key={child.id}
+              value={String(child.id)}
+              title={child.name}
+              icon={category.id === transaction.category_id ? Icon.Check : undefined}
+            />
+          ))}
+        </Form.Dropdown.Section>
+      );
+    }
+
+    return (
+      <Form.Dropdown.Item
+        key={category.id}
+        value={String(category.id)}
+        title={category.name}
+        icon={category.id === transaction.category_id ? Icon.Check : undefined}
+      />
+    );
+  });
+}
 
 export function EditTransactionForm({
   transaction,
@@ -13,17 +66,33 @@ export function EditTransactionForm({
   onEdit: (transaction: lunchMoney.Transaction, update: lunchMoney.TransactionUpdate) => void;
 }) {
   const { pop } = useNavigation();
-  const { data: categories, isLoading: isLoadingCategories } = useCachedPromise(lunchMoney.getCategories, []);
-  const { data: recuringItems, isLoading: isLoadingRecuringItems } = useCachedPromise(lunchMoney.getRecurringItems, []);
-  const { data: tags, isLoading: isLoadingTags } = useCachedPromise(lunchMoney.getTags, []);
+  const {
+    data: { categories, recurringItems, tags },
+    isLoading,
+  } = useCachedPromise(
+    async () =>
+      all({
+        categories: lunchMoney.getCategories(),
+        recurringItems: lunchMoney.getRecurringItems(),
+        tags: lunchMoney.getTags(),
+      }),
+    [],
+    {
+      keepPreviousData: true,
+      initialData: {
+        categories: [] as lunchMoney.Category[],
+        recurringItems: [] as lunchMoney.RecurringItem[],
+        tags: [] as lunchMoney.Tag[],
+      },
+      onError: (err) => {
+        console.log("Error", err);
+      },
+    },
+  );
+
   const [newTags, setNewTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>(transaction.tags?.map((tag) => String(tag.id)) || []);
   const [date, setDate] = useState<Date | null>(new Date(transaction.date));
-  const formattedDate = new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
 
   const { handleSubmit, itemProps } = useForm<{
     payee: string;
@@ -45,7 +114,7 @@ export function EditTransactionForm({
         tags: tagsToUpdate,
         status: values.reviewed ? lunchMoney.TransactionStatus.CLEARED : lunchMoney.TransactionStatus.UNCLEARED,
         notes: values.notes,
-        date: date ? formattedDate.format(date) : undefined,
+        date: date ? formatISO(date, { representation: "date" }) : undefined,
       };
 
       onEdit(transaction, update);
@@ -70,53 +139,7 @@ export function EditTransactionForm({
     },
   });
 
-  const renderCategories = (categories?: lunchMoney.Category[]) => {
-    if (!categories) return null;
-
-    return categories.map((category) => {
-      if (category.is_group && category.children) {
-        return (
-          <Form.Dropdown.Section key={category.id} title={category.name}>
-            {category.children.map((child) => (
-              <Form.Dropdown.Item
-                key={child.id}
-                value={String(child.id)}
-                title={child.name}
-                icon={category.id === transaction.category_id ? Icon.Check : undefined}
-              />
-            ))}
-          </Form.Dropdown.Section>
-        );
-      }
-
-      return (
-        <Form.Dropdown.Item
-          key={category.id}
-          value={String(category.id)}
-          title={category.name}
-          icon={category.id === transaction.category_id ? Icon.Check : undefined}
-        />
-      );
-    });
-  };
-
-  const renderRecuring = (recurings?: lunchMoney.RecurringItem[]) => {
-    if (!recurings) return null;
-
-    return recurings.map((recuring) => {
-      return (
-        <Form.Dropdown.Item
-          key={recuring.id}
-          value={String(recuring.id)}
-          title={recuring.payee}
-          icon={recuring.id === transaction.recurring_id ? Icon.Check : undefined}
-        />
-      );
-    });
-  };
-
   const tagItems = useMemo(() => {
-    if (!tags) return [];
     const items = tags.map((tag: { id: Key | null | undefined; name: string }) => (
       <Form.TagPicker.Item key={tag.id} value={String(tag.id)} title={tag.name} />
     ));
@@ -159,7 +182,7 @@ export function EditTransactionForm({
 
   return (
     <Form
-      isLoading={isLoadingCategories || isLoadingTags || isLoadingRecuringItems}
+      isLoading={isLoading}
       actions={
         <ActionPanel>
           <Action.SubmitForm title="Save Changes" onSubmit={handleSubmit} />
@@ -175,7 +198,7 @@ export function EditTransactionForm({
       <Form.TextField title="Payee" placeholder="Transaction payee" {...itemProps.payee} />
       <Form.Dropdown title="Category" {...itemProps.category_id}>
         <Form.Dropdown.Item title="No Category" value="" icon={Icon.XMarkCircle} />
-        {renderCategories(categories)}
+        <TransactionFormCategories transaction={transaction} categories={categories} />
       </Form.Dropdown>
       <Form.TextArea title="Notes" {...itemProps.notes} />
       <Form.TagPicker id="tags" title="Tags" value={selectedTags} onChange={setSelectedTags}>
@@ -184,7 +207,7 @@ export function EditTransactionForm({
       <Form.DatePicker title="Date" type={Form.DatePicker.Type.Date} value={date} onChange={setDate} id="date" />
       <Form.Dropdown title="Recuring Expenses" {...itemProps.recuring_id}>
         <Form.Dropdown.Item title="No Recuring Expenses" value="" icon={Icon.XMarkCircle} />
-        {renderRecuring(recuringItems)}
+        <TransactionFormRecuringItems transaction={transaction} recuringItems={recurringItems} />
       </Form.Dropdown>
       <Form.Checkbox title="Status" label="Reviewed" {...itemProps.reviewed} />
     </Form>
