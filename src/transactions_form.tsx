@@ -2,7 +2,7 @@
 import { Action, ActionPanel, Form, Icon, useNavigation } from "@raycast/api";
 import { useCachedPromise, useForm } from "@raycast/utils";
 import * as lunchMoney from "./lunchmoney";
-import { Key, useMemo, useState } from "react";
+import { useState } from "react";
 import { getFormatedAmount } from "./format";
 import { formatISO } from "date-fns";
 import { all } from "radash";
@@ -139,13 +139,9 @@ export function EditTransactionForm({
     },
   });
 
-  const tagItems = useMemo(() => {
-    const items = tags.map((tag: { id: Key | null | undefined; name: string }) => (
-      <Form.TagPicker.Item key={tag.id} value={String(tag.id)} title={tag.name} />
-    ));
-    const newItems = newTags.map((tagName) => <Form.TagPicker.Item key={tagName} value={tagName} title={tagName} />);
-    return [...items, ...newItems];
-  }, [tags, newTags]);
+  const tagItems = tags
+    .map((tag) => <Form.TagPicker.Item key={tag.id} value={String(tag.id)} title={tag.name} />)
+    .concat(newTags.map((tagName) => <Form.TagPicker.Item key={tagName} value={tagName} title={tagName} />));
 
   const AddTag = () => {
     const { handleSubmit, itemProps } = useForm<{ tag: string }>({
