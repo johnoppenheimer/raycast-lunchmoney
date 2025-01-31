@@ -93,6 +93,7 @@ export function EditTransactionForm({
   const [newTags, setNewTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>(transaction.tags?.map((tag) => String(tag.id)) || []);
   const [date, setDate] = useState<Date | null>(new Date(transaction.date));
+  const [isTagsFocused, setTagsFocused] = useState(false);
 
   const { handleSubmit, itemProps } = useForm<{
     payee: string;
@@ -181,8 +182,13 @@ export function EditTransactionForm({
       isLoading={isLoading}
       actions={
         <ActionPanel>
+          {isTagsFocused && (
+            <Action.Push title="Create New Tag" shortcut={{ modifiers: ["cmd"], key: "t" }} target={<AddTag />} />
+          )}
           <Action.SubmitForm title="Save Changes" onSubmit={handleSubmit} />
-          <Action.Push title="Add Tag" shortcut={{ modifiers: ["cmd"], key: "t" }} target={<AddTag />} />
+          {!isTagsFocused && (
+            <Action.Push title="Create New Tag" shortcut={{ modifiers: ["cmd"], key: "t" }} target={<AddTag />} />
+          )}
           <Action title="Back" shortcut={{ modifiers: [], key: "arrowLeft" }} onAction={pop} />
         </ActionPanel>
       }
@@ -197,7 +203,14 @@ export function EditTransactionForm({
         <TransactionFormCategories transaction={transaction} categories={categories} />
       </Form.Dropdown>
       <Form.TextArea title="Notes" {...itemProps.notes} />
-      <Form.TagPicker id="tags" title="Tags" value={selectedTags} onChange={setSelectedTags}>
+      <Form.TagPicker
+        id="tags"
+        title="Tags"
+        value={selectedTags}
+        onChange={setSelectedTags}
+        onFocus={() => setTagsFocused(true)}
+        onBlur={() => setTagsFocused(false)}
+      >
         {tagItems}
       </Form.TagPicker>
       <Form.DatePicker title="Date" type={Form.DatePicker.Type.Date} value={date} onChange={setDate} id="date" />
