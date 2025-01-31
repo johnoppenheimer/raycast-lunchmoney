@@ -5,6 +5,9 @@
   "description": "View and update your Lunch Money transactions",
   "icon": "extension-icon.png",
   "author": "oppenheimer",
+  "contributors": [
+    "gfanton"
+  ],
   "categories": [
     "Finance"
   ],
