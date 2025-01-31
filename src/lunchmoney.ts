@@ -97,6 +97,7 @@ export interface Transaction {
   is_income: boolean;
   display_name?: string;
   display_note: string | null;
+  account_display_name: string;
 
   // recurring
   recurring_id: number | null;

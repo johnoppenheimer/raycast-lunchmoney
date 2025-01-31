@@ -195,7 +195,7 @@ export function EditTransactionForm({
     >
       <Form.Description
         title={"Transaction"}
-        text={`${getFormatedAmount(transaction)} using '${transaction.plaid_account_name}'`}
+        text={`${getFormatedAmount(transaction)} using '${transaction.account_display_name}'`}
       />
       <Form.TextField title="Payee" placeholder="Transaction payee" {...itemProps.payee} />
       <Form.Dropdown title="Category" {...itemProps.category_id}>

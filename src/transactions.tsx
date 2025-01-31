@@ -59,7 +59,7 @@ function TransactionListItem({
       subtitle={getTransactionSubtitle(transaction)}
       icon={getTransactionIcon(transaction)}
       accessories={sift([
-        { text: `${transaction.plaid_account_name ?? transaction.asset_name ?? ""}` },
+        { text: transaction.account_display_name },
         transaction.is_group ? { icon: Icon.Folder, tooltip: "Group" } : undefined,
         ...(transaction.tags?.map((tag) => ({ tag: tag.name })) ?? []),
         transaction.category_name ? { tag: transaction.category_name, icon: Icon.Tag } : undefined,
