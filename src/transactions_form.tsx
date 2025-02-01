@@ -112,6 +112,7 @@ export function EditTransactionForm({
       const update: lunchMoney.TransactionUpdate = {
         payee: values.payee,
         category_id: values.category_id ? parseInt(values.category_id) : undefined,
+        recurring_id: values.recuring_id ? parseInt(values.recuring_id) : undefined,
         tags: tagsToUpdate,
         status: values.reviewed ? lunchMoney.TransactionStatus.CLEARED : lunchMoney.TransactionStatus.UNCLEARED,
         notes: values.notes,
