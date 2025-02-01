@@ -161,7 +161,7 @@ function TransactionsFilter() {
 }
 
 export default function Command() {
-  const [filter] = useFilterState();
+  const [filter, setFilterState] = useFilterState();
   const { data, isLoading, mutate } = useCachedPromise(lunchMoney.getTransactions, [
     {
       start_date: format(subMonths(new Date(), preferences.maxMonthsTransactionsHistory), "yyyy-MM-dd"),
@@ -255,8 +255,23 @@ export default function Command() {
     }
   };
 
+  const toggleFilterState = () => setFilterState((f) => (f === "all" ? "not_reviewed" : "all"));
+
   return (
-    <List isLoading={isLoading} searchBarAccessory={<TransactionsFilter />}>
+    <List
+      isLoading={isLoading}
+      searchBarAccessory={<TransactionsFilter />}
+      actions={
+        <ActionPanel>
+          <Action
+            title={filter === "all" ? "Review Pending Transactions" : "Review All Transactions"}
+            onAction={toggleFilterState}
+            icon={Icon.Switch}
+            shortcut={{ modifiers: ["opt"], key: "v" }}
+          />
+        </ActionPanel>
+      }
+    >
       {!isLoading && data != null && data.length <= 0 && (
         <List.EmptyView
           icon={{ source: "../assets/grey_raycast_icon.png" }}
