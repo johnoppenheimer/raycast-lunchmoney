@@ -28,6 +28,14 @@
       "type": "password",
       "description": "Your LunchMoney API key",
       "required": true
+    },
+    {
+      "title": "Max Months Transactions History",
+      "name": "maxMonthsTransactionsHistory",
+      "type": "textfield",
+      "description": "The maximum number of months to show in the transactions list",
+      "default": "2",
+      "required": false
     }
   ],
   "dependencies": {

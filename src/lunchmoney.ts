@@ -214,6 +214,7 @@ export type TransactionsEndpointArguments = {
   end_date?: string;
   tag_id?: number;
   debit_as_negative?: boolean;
+  status?: TransactionStatus;
 };
 
 const { token } = getPreferences();

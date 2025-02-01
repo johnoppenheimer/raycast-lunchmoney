@@ -1,12 +1,20 @@
 import { ActionPanel, List, Action, Icon, Color, Image, showToast, Toast } from "@raycast/api";
-import { useCachedPromise } from "@raycast/utils";
+import { useCachedPromise, useCachedState } from "@raycast/utils";
 import { match, P } from "ts-pattern";
 import * as lunchMoney from "./lunchmoney";
 import { EditTransactionForm } from "./transactions_form";
-import { useMemo, useState } from "react";
-import { compareDesc, eachMonthOfInterval, endOfMonth, format, parse, startOfMonth, startOfYear } from "date-fns";
+import { useMemo } from "react";
+import { compareDesc, format, subMonths } from "date-fns";
 import { alphabetical, group, sift, sort } from "radash";
 import { getFormatedAmount } from "./format";
+import { getPreferences } from "./preferences";
+
+const preferences = getPreferences();
+
+type TransactionFilters = "all" | "not_reviewed";
+const useFilterState = () => {
+  return useCachedState<TransactionFilters>("transactions_filter", "all");
+};
 
 export const getTransactionIcon = (transaction: lunchMoney.Transaction) =>
   match(transaction)
@@ -49,9 +57,12 @@ function TransactionListItem({
   onValidate: (transaction: lunchMoney.Transaction) => void;
   onEdit: (transaction: lunchMoney.Transaction, update: lunchMoney.TransactionUpdate) => void;
 }) {
+  const [filter, setFilterState] = useFilterState();
   const validate = async () => {
     onValidate(transaction);
   };
+
+  const toggleFilterState = () => setFilterState((f) => (f === "all" ? "not_reviewed" : "all"));
 
   return (
     <List.Item
@@ -85,6 +96,12 @@ function TransactionListItem({
           <Action.OpenInBrowser
             title="View Payee in Lunch Money"
             url={`https://my.lunchmoney.app/transactions/${format(transaction.date, "yyyy/MM")}?match=all&payee_exact=${encodeURIComponent(transaction.payee)}&time=month`}
+          />
+          <Action
+            title={filter === "all" ? "Review Pending Transactions" : "Review All Transactions"}
+            onAction={toggleFilterState}
+            icon={Icon.Switch}
+            shortcut={{ modifiers: ["opt"], key: "v" }}
           />
         </ActionPanel>
       }
@@ -126,31 +143,31 @@ const groupAndSortTransactionsByCreatedAt = (
   return sortedTransactions;
 };
 
-function TransactionsDropdown({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const months = eachMonthOfInterval({
-    start: startOfYear(new Date()),
-    end: new Date(),
-  }).reverse();
+function TransactionsFilter() {
+  const [filter, setFilter] = useFilterState();
 
   return (
-    <List.Dropdown tooltip="Choose a month" value={value} onChange={onChange}>
-      <List.Dropdown.Section title="Month">
-        {months.map((month) => (
-          <List.Dropdown.Item
-            key={format(month, "yyyy-MM")}
-            title={format(month, "MMM yyyy")}
-            value={format(month, "yyyy-MM-dd")}
-          />
-        ))}
+    <List.Dropdown
+      tooltip="Choose a filter"
+      value={filter}
+      onChange={(value) => setFilter(value as TransactionFilters)}
+    >
+      <List.Dropdown.Section title="Filter">
+        <List.Dropdown.Item title="All" value="all" />
+        <List.Dropdown.Item title="Not Reviewed" value="not_reviewed" />
       </List.Dropdown.Section>
     </List.Dropdown>
   );
 }
 
 export default function Command() {
-  const [month, setMonth] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
+  const [filter, setFilterState] = useFilterState();
   const { data, isLoading, mutate } = useCachedPromise(lunchMoney.getTransactions, [
-    { start_date: month, end_date: format(endOfMonth(parse(month, "yyyy-MM-dd", new Date())), "yyyy-MM-dd") },
+    {
+      start_date: format(subMonths(new Date(), preferences.maxMonthsTransactionsHistory), "yyyy-MM-dd"),
+      end_date: format(new Date(), "yyyy-MM-dd"),
+      status: filter === "all" ? undefined : lunchMoney.TransactionStatus.UNCLEARED,
+    },
   ]);
 
   const [pendingTransactions, transactionsGroups] = useMemo(() => {
@@ -238,8 +255,31 @@ export default function Command() {
     }
   };
 
+  const toggleFilterState = () => setFilterState((f) => (f === "all" ? "not_reviewed" : "all"));
+
   return (
-    <List isLoading={isLoading} searchBarAccessory={<TransactionsDropdown value={month} onChange={setMonth} />}>
+    <List
+      isLoading={isLoading}
+      searchBarAccessory={<TransactionsFilter />}
+      actions={
+        <ActionPanel>
+          <Action
+            title={filter === "all" ? "Review Pending Transactions" : "Review All Transactions"}
+            onAction={toggleFilterState}
+            icon={Icon.Switch}
+            shortcut={{ modifiers: ["opt"], key: "v" }}
+          />
+        </ActionPanel>
+      }
+    >
+      {!isLoading && data != null && data.length <= 0 && (
+        <List.EmptyView
+          icon={{ source: "../assets/grey_raycast_icon.png" }}
+          title={filter === "all" ? "No transactions found" : "You're all set!"}
+          description={filter === "all" ? undefined : "No more transactions to review"}
+        />
+      )}
+
       <List.Section title="Pending Transactions">
         {pendingTransactions.map((transaction) => (
           <TransactionListItem
