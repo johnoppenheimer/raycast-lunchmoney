@@ -190,7 +190,6 @@ export function EditTransactionForm({
           {!isTagsFocused && (
             <Action.Push title="Create New Tag" shortcut={{ modifiers: ["cmd"], key: "t" }} target={<AddTag />} />
           )}
-          <Action title="Back" shortcut={{ modifiers: [], key: "arrowLeft" }} onAction={pop} />
         </ActionPanel>
       }
     >
