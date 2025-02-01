@@ -57,9 +57,12 @@ function TransactionListItem({
   onValidate: (transaction: lunchMoney.Transaction) => void;
   onEdit: (transaction: lunchMoney.Transaction, update: lunchMoney.TransactionUpdate) => void;
 }) {
+  const [filter, setFilterState] = useFilterState();
   const validate = async () => {
     onValidate(transaction);
   };
+
+  const toggleFilterState = () => setFilterState((f) => (f === "all" ? "not_reviewed" : "all"));
 
   return (
     <List.Item
@@ -93,6 +96,12 @@ function TransactionListItem({
           <Action.OpenInBrowser
             title="View Payee in Lunch Money"
             url={`https://my.lunchmoney.app/transactions/${format(transaction.date, "yyyy/MM")}?match=all&payee_exact=${encodeURIComponent(transaction.payee)}&time=month`}
+          />
+          <Action
+            title={filter === "all" ? "Review Pending Transactions" : "Review All Transactions"}
+            onAction={toggleFilterState}
+            icon={Icon.Switch}
+            shortcut={{ modifiers: ["opt"], key: "v" }}
           />
         </ActionPanel>
       }
@@ -248,14 +257,15 @@ export default function Command() {
 
   return (
     <List isLoading={isLoading} searchBarAccessory={<TransactionsFilter />}>
+      {!isLoading && data != null && data.length <= 0 && (
+        <List.EmptyView
+          icon={{ source: "../assets/grey_raycast_icon.png" }}
+          title={filter === "all" ? "No transactions found" : "You're all set!"}
+          description={filter === "all" ? undefined : "No more transactions to review"}
+        />
+      )}
+
       <List.Section title="Pending Transactions">
-        {!isLoading && data != null && data.length <= 0 && (
-          <List.EmptyView
-            icon={{ source: "../assets/grey_raycast_icon.png" }}
-            title={filter === "all" ? "No transactions found" : "You're all set!"}
-            description={filter === "all" ? undefined : "No more transactions to review"}
-          />
-        )}
         {pendingTransactions.map((transaction) => (
           <TransactionListItem
             key={String(transaction.id)}
